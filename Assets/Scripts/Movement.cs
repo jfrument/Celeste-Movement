@@ -3,13 +3,20 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using DG.Tweening;
+//using UnityEditorInternal;
 
 public class Movement : MonoBehaviour
 {
+    public Animator squishy;
     private Collision coll;
+
+    public AudioSource jumpNoise;
+    public AudioSource land;
+
     [HideInInspector]
     public Rigidbody2D rb;
     private AnimationScript anim;
+
 
     [Space]
     [Header("Stats")]
@@ -17,7 +24,8 @@ public class Movement : MonoBehaviour
     public float jumpForce = 50;
     public float slideSpeed = 5;
     public float wallJumpLerp = 10;
-    public float dashSpeed = 20;
+    public float dashSpeed = 40;
+    public float grav = 3f;
 
     [Space]
     [Header("Booleans")]
@@ -26,6 +34,7 @@ public class Movement : MonoBehaviour
     public bool wallJumped;
     public bool wallSlide;
     public bool isDashing;
+    public bool newMovement = true;
 
     [Space]
 
@@ -57,6 +66,9 @@ public class Movement : MonoBehaviour
         float xRaw = Input.GetAxisRaw("Horizontal");
         float yRaw = Input.GetAxisRaw("Vertical");
         Vector2 dir = new Vector2(x, y);
+
+        if(Input.GetKeyDown("e"))
+            switchParams();
 
         Walk(dir);
         anim.SetHorizontalMovement(x, y, rb.velocity.y);
@@ -93,10 +105,10 @@ public class Movement : MonoBehaviour
         }
         else
         {
-            rb.gravityScale = 3;
+            rb.gravityScale = grav;
         }
 
-        if(coll.onWall && !coll.onGround)
+        if (coll.onWall && !coll.onGround)
         {
             if (x != 0 && !wallGrab)
             {
@@ -110,14 +122,22 @@ public class Movement : MonoBehaviour
 
         if (Input.GetButtonDown("Jump"))
         {
+
             anim.SetTrigger("jump");
+            if (newMovement) squishy.SetTrigger("StartJump");
 
             if (coll.onGround)
+            {
                 Jump(Vector2.up, false);
+                
+                if (newMovement) jumpNoise.Play();
+            }
             if (coll.onWall && !coll.onGround)
+            {
                 WallJump();
+                if (newMovement) jumpNoise.Play();
+            }
         }
-
         if (Input.GetButtonDown("Fire1") && !hasDashed)
         {
             if(xRaw != 0 || yRaw != 0)
@@ -153,7 +173,20 @@ public class Movement : MonoBehaviour
 
 
     }
-
+    void switchParams()
+    {
+        newMovement = !newMovement;
+        if(newMovement)
+        {
+            grav = 1.5f;
+            dashSpeed = 60f;
+        }
+        else
+        {
+            grav = 3f;
+            dashSpeed = 40f;
+        }
+    }
     void GroundTouch()
     {
         hasDashed = false;
@@ -183,6 +216,8 @@ public class Movement : MonoBehaviour
 
     IEnumerator DashWait()
     {
+
+        if (newMovement) land.Play();
         FindObjectOfType<GhostTrail>().ShowGhost();
         StartCoroutine(GroundDash());
         DOVirtual.Float(14, 0, .8f, RigidbodyDrag);
@@ -196,7 +231,7 @@ public class Movement : MonoBehaviour
         yield return new WaitForSeconds(.3f);
 
         dashParticle.Stop();
-        rb.gravityScale = 3;
+        rb.gravityScale = grav;
         GetComponent<BetterJumping>().enabled = true;
         wallJumped = false;
         isDashing = false;

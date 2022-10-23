@@ -8,6 +8,7 @@ public class AnimationScript : MonoBehaviour
     private Animator anim;
     private Movement move;
     private Collision coll;
+    private Animator transAm;
     [HideInInspector]
     public SpriteRenderer sr;
 
